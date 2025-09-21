@@ -1,121 +1,122 @@
 CREATE VIEW Arrivals AS 
 
-WITH Colour AS(
+WITH DOC_1 AS(
 
 SELECT 
 	[ORDER_MONTH],
-	[MATERIAL],
-	[MTOC],
+	[MOTO_ID],
+	[MOTORCYCLE],
 	[ETA],
 	[UNITs],
 	[FACTORY]
 FROM 
-	dbo.[06_COLOUR_FIX_VIEW]
+	dbo.[DOC_1_ORIGINAL_SQL_TABLE]
 WHERE
 	[Factory] = 'factory_A'
 		
-), CTE_book AS(
+), CTE_DOC_2 AS(
 
    SELECT
 	[ORDER_MONTH],    	
 	[Invoice],
-	[MTOC], 
+	[MOTORCYCLE], 
 	[Units],
 	[Date of Upload],
 	[ETA]
    FROM 
-	dbo.[06_BOOKINGS]
+	dbo.[DOC_2_ORIGINAL_SQL_TABLE]
    WHERE 
 	[Factory] = 'factory_A'
    AND
 	[Date of Upload] = (SELECT MAX([Date of Upload])
-			    FROM dbo.[06_BOOKINGS]
+			    FROM dbo.[DOC_2_ORIGINAL_SQL_TABLE]
 			    WHERE [Factory] = 'factory_A')  
         
-), book AS(
+), DOC_2 AS(
 
 SELECT 
 	[ORDER_MONTH],
 	[Invoice],
-   	[MTOC],
+   	[MOTORCYCLE],
 	[ETA],
-   	SUM([Units]) AS [Unidades booking]
+   	SUM([Units]) AS [Unidades DOC_2]
 FROM 
-	CTE_book
+	CTE_DOC_2
 GROUP BY 
 	[ORDER_MONTH],
 	[Invoice],
-	[MTOC],
+	[MOTORCYCLE],
 	[ETA]
 
-), vess AS(
+), DOC_3 AS(
 
 SELECT 
 	[INVOICE],
-	[MTOC],
+	[MOTORCYCLE],
 	[UNITS],
 	[DATE-PLANNED],
 	[CONTAINER],
 	[DATE OF UPLOAD],
-	MAX([DATE OF UPLOAD]) OVER (PARTITION BY [INVOICE], [MTOC], [CONTAINER], [UNITS]) AS MAX_DATE
+	MAX([DATE OF UPLOAD]) OVER (PARTITION BY [INVOICE], [MOTORCYCLE], [CONTAINER], [UNITS]) AS MAX_DATE
 FROM
-	dbo.[06_VESSELS]
+	dbo.[DOC_3_ORIGINAL_SQL_TABLE]
 WHERE 
 	[Factory] = 'factory_A'
 				
-), acc_vess AS (
+), acc_DOC_3 AS (
 
 SELECT
 	[INVOICE],
-	[MTOC],
+	[MOTORCYCLE],
 	[UNITS],
 	[DATE-PLANNED],
 	[CONTAINER],
 	[DATE OF UPLOAD]
 FROM
-	vess
+	DOC_3
 WHERE
 	[DATE OF UPLOAD] = MAX_DATE
 	
-), agg_vess AS(
+), agg_DOC_3 AS(
 
 SELECT
 	LEFT([INVOICE], LEN([INVOICE]) - 2) AS PO,
 	[INVOICE],
-	[MTOC],
+	[MOTORCYCLE],
 	[DATE-PLANNED],
 	[CONTAINER],
 	SUM([UNITS]) AS UNITS
 FROM
-	acc_vess
+	acc_DOC_3
 GROUP BY 
 	LEFT([INVOICE], LEN([INVOICE]) - 2),
 	[INVOICE],
-	[MTOC],
+	[MOTORCYCLE],
 	[DATE-PLANNED],
 	[CONTAINER]
+
 ), vlookup AS (
 
 SELECT DISTINCT
 	LEFT([Invoice], LEN([Invoice]) - 2) AS PO,
 	[ORDER_MONTH]
 FROM 
-	dbo.[06_BOOKINGS]
+	dbo.[DOC_2_ORIGINAL_SQL_TABLE]
 WHERE
 	[Factory] = 'factory_A'
 	
-), vess_vlookup AS (
+), DOC_3_vlookup AS (
 
 SELECT 
 	v.[ORDER_MONTH],
 	a.[INVOICE],
-	a.[MTOC],
+	a.[MOTORCYCLE],
 	a.[DATE-PLANNED],
 	a.[UNITS],
 	a.[CONTAINER]
 	
 FROM 
-	agg_vess a
+	agg_DOC_3 a
 
 LEFT JOIN 
 	vlookup v
@@ -123,35 +124,35 @@ LEFT JOIN
 ON 	
 	a.[PO] = v.[PO]
 	
-), vessel_book AS (
+), DOC_3_DOC_2 AS (
 
 SELECT 
-	b.[ORDER_MONTH] AS ORDER_MONTH_BOOKING,
-	v.[ORDER_MONTH] AS ORDER_MONTH_VESSEL,
+	b.[ORDER_MONTH] AS ORDER_MONTH_DOC_2,
+	v.[ORDER_MONTH] AS ORDER_MONTH_DOC_3,
 	CASE
 		WHEN v.[ORDER_MONTH] IS NOT NULL THEN v.[ORDER_MONTH]
 		WHEN v.[ORDER_MONTH] IS NULL THEN b.[ORDER_MONTH]
 	END AS [ORDER_MONTH],
-	b.[Invoice] AS INVOICE_BOOKING,
-	v.[INVOICE] AS INVOICE_VESSEL,
+	b.[Invoice] AS INVOICE_DOC_2,
+	v.[INVOICE] AS INVOICE_DOC_3,
 	CASE
 		WHEN v.[INVOICE] IS NOT NULL THEN v.[INVOICE]
 		WHEN v.[INVOICE] IS NULL THEN b.[Invoice]
 	END AS [INVOICE],
-	b.[MTOC] AS MTOC_BOOKING,
-	v.[MTOC] AS MTOC_VESSEL,
+	b.[MOTORCYCLE] AS MOTORCYCLE_DOC_2,
+	v.[MOTORCYCLE] AS MOTORCYCLE_DOC_3,
 	CASE
-		WHEN v.[MTOC] IS NOT NULL THEN v.[MTOC]
-		WHEN v.[MTOC] IS NULL THEN b.[MTOC]
-	END AS [MTOC],
-	b.[Unidades booking],
-	v.[UNITS] AS [Unidades vessel],
+		WHEN v.[MOTORCYCLE] IS NOT NULL THEN v.[MOTORCYCLE]
+		WHEN v.[MOTORCYCLE] IS NULL THEN b.[MOTORCYCLE]
+	END AS [MOTORCYCLE],
+	b.[Unidades DOC_2],
+	v.[UNITS] AS [Unidades DOC_3],
 	CASE
 		WHEN v.[UNITS] IS NOT NULL THEN v.[UNITS]
-		WHEN v.[UNITS] IS NULL THEN b.[Unidades booking]
+		WHEN v.[UNITS] IS NULL THEN b.[Unidades DOC_2]
 	END AS [Unidades],
-	b.[ETA] AS [ETA Booking],
-	v.[DATE-PLANNED] AS [DATE-PLANNED VESSEL],
+	b.[ETA] AS [ETA DOC_2],
+	v.[DATE-PLANNED] AS [DATE-PLANNED DOC_3],
 	CASE
 		WHEN v.[DATE-PLANNED] IS NOT NULL THEN v.[DATE-PLANNED]
 		WHEN v.[DATE-PLANNED] IS NULL THEN b.[ETA]
@@ -159,17 +160,17 @@ SELECT
 	v.[CONTAINER]
 	
 FROM
-	book b
+	DOC_2 b
 
 FULL JOIN
-	vess_vlookup v
+	DOC_3_vlookup v
 	
 ON
-	b.[MTOC] = v.[MTOC]
+	b.[MOTORCYCLE] = v.[MOTORCYCLE]
 AND
 	b.[Invoice] = v.[INVOICE]
 		
-), cont AS(
+), DOC_4 AS(
 
 SELECT 
 	[INVOICE],
@@ -178,9 +179,9 @@ SELECT
 	[DATE_OF_UPLOAD],
 	MAX([DATE_OF_UPLOAD]) OVER (PARTITION BY [INVOICE], [CONTAINER]) AS MAX_DATE
 FROM
-	dbo.[06_CONTAINER_PLANNING]
+	dbo.[DOC_4_ORIGINAL_SQL_TABLE]
 
-), acc_cont AS(
+), acc_DOC_4 AS(
 
 SELECT
 	[INVOICE],
@@ -188,48 +189,49 @@ SELECT
 	[ARRIVAL_DATE],
 	[DATE_OF_UPLOAD]
 FROM
-	cont
+	DOC_4
 WHERE
 	[DATE_OF_UPLOAD] = MAX_DATE
-), col_book_vess AS (
+
+), DOC_1_DOC_2_DOC_3 AS (
 
 SELECT
 	c.[ORDER_MONTH],
-	c.[MATERIAL],
-	c.[MTOC],
+	c.[MOTO_ID],
+	c.[MOTORCYCLE],
 	v.[INVOICE],
 	v.[CONTAINER],
 	c.[UNITs],
-	v.[Unidades booking],
-	v.[Unidades vessel],
+	v.[Unidades DOC_2],
+	v.[Unidades DOC_3],
 	CASE
 		WHEN v.[Unidades] IS NOT NULL THEN v.[Unidades]
 		WHEN v.[Unidades] IS NULL THEN c.[UNITs]
 	END AS [Unidades],
-	c.[ETA] AS [ETA Colour],
-	v.[ETA Booking],
-	v.[DATE-PLANNED VESSEL] AS [ETA Vessel],
+	c.[ETA] AS [ETA DOC_1],
+	v.[ETA DOC_2],
+	v.[DATE-PLANNED DOC_3] AS [ETA DOC_3],
 	p.[ARRIVAL_DATE],
 	CASE
 		WHEN p.[ARRIVAL_DATE] IS NOT NULL THEN p.[ARRIVAL_DATE]
-		WHEN p.[ARRIVAL_DATE] IS NULL AND v.[DATE-PLANNED VESSEL] IS NOT NULL THEN v.[DATE-PLANNED VESSEL]
-		WHEN p.[ARRIVAL_DATE] IS NULL AND v.[DATE-PLANNED VESSEL] IS NULL AND v.[ETA Booking] <> '1900-01-01' THEN v.[ETA Booking]
-		WHEN p.[ARRIVAL_DATE] IS NULL AND v.[DATE-PLANNED VESSEL] IS NULL AND (v.[ETA Booking] IS NULL OR v.[ETA booking] = '1900-01-01') THEN c.[ETA]
+		WHEN p.[ARRIVAL_DATE] IS NULL AND v.[DATE-PLANNED DOC_3] IS NOT NULL THEN v.[DATE-PLANNED DOC_3]
+		WHEN p.[ARRIVAL_DATE] IS NULL AND v.[DATE-PLANNED DOC_3] IS NULL AND v.[ETA DOC_2] <> '1900-01-01' THEN v.[ETA DOC_2]
+		WHEN p.[ARRIVAL_DATE] IS NULL AND v.[DATE-PLANNED DOC_3] IS NULL AND (v.[ETA DOC_2] IS NULL OR v.[ETA DOC_2] = '1900-01-01') THEN c.[ETA]
 	END AS [Fecha de llegada],
 	c.[FACTORY]
 	
 	FROM
-		vessel_book v
+		DOC_3_DOC_2 v
 		
 	RIGHT JOIN
-		Colour c
+		DOC_1 c
 	ON 
 		v.[ORDER_MONTH] = c.[ORDER_MONTH]
 	AND
-		v.[MTOC] = c.[MTOC]
+		v.[MOTORCYCLE] = c.[MOTORCYCLE]
 		
 	LEFT JOIN
-		acc_cont p
+		acc_DOC_4 p
 	ON
 		v.[INVOICE] = p.[INVOICE]
 	AND
@@ -241,4 +243,4 @@ SELECT
    *,
    DATEPART(WEEK, [Fecha de llegada]) - DATEPART(WEEK, DATEADD(MONTH, DATEDIFF(MONTH, 0, [Fecha de llegada]), 0)) + 1 AS SemanaDelMes
  
-FROM col_book_vess
+FROM DOC_1_DOC_2_DOC_3
